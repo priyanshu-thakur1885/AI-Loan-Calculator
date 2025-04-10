@@ -375,7 +375,7 @@ def dashboard():
         except Exception as e:
             print(f"Error counting unread messages: {e}")
     
-    return render_template('dashboard.html', loan_history=loan_history, unread_message_count=unread_count)
+    return render_template('index.html', loan_history=loan_history, unread_message_count=unread_count)
 
 # Messages page route
 @app.route('/messages_page')
