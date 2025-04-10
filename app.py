@@ -55,7 +55,7 @@ try:
     
     if mongo_setup_success:
         client = MongoClient(app.config['MONGODB_URI'], serverSelectionTimeoutMS=5000)
-        db = client[app.config['DB_NAME']]
+        db = client['loancalculator']
         print("Connected to MongoDB successfully!")
         
         # Check if we need to import sample data (can be controlled with environment variable)
