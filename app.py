@@ -54,7 +54,7 @@ try:
     mongo_setup_success = setup_mongodb()
     
     if mongo_setup_success:
-        client = MongoClient(os.environ.get('mongodb+srv://admin:hyperX@loancalculator.mnccqo8.mongodb.net/?retryWrites=true&w=majority&appName=LoanCalculator'))
+        client = MongoClient(os.environ.get('MONGODB_URI'))
         db = client['LoanCalculator']
         print("Connected to MongoDB successfully!")
         
@@ -72,10 +72,7 @@ except Exception as e:
     db = None
     
     # Make sure MongoDB Compass info is displayed to user
-    print("\nTo use MongoDB Compass:")
-    print("1. Make sure MongoDB service is running")
-    print("2. Open MongoDB Compass")
-    print("3. Connect to: mongodb://localhost:27017/")
+
     print("4. Create database: loan_calculator_db")
     print("5. Create collections: users, calculations, chat_logs")
 
