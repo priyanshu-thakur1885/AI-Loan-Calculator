@@ -18,7 +18,7 @@ from datetime import datetime
 from mongodb_setup import setup_mongodb, import_sample_data, MONGODB_URI, DB_NAME
 
 # Create Flask application
-app = Flask(__name__)
+app = Flask(__name__, template_folder='.')
 app.config['SECRET_KEY'] = 'ailoancalculator2024secretkey'
 app.config['MONGODB_URI'] = MONGODB_URI
 app.config['DB_NAME'] = DB_NAME
