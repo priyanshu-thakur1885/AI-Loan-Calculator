@@ -8,7 +8,7 @@ from flask_bcrypt import Bcrypt
 bcrypt = Bcrypt()
 
 # MongoDB connection settings
-MONGODB_URI = 'mongodb://localhost:27017/'
+MONGODB_URI = 'mongodb+srv://admin:hyperX@loancalculator.mnccqo8.mongodb.net/?retryWrites=true&w=majority&appName=LoanCalculator'
 DB_NAME = 'loan_calculator_db'
 
 def setup_mongodb():
