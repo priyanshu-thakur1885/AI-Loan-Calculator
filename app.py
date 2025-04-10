@@ -20,7 +20,7 @@ from mongodb_setup import setup_mongodb, import_sample_data, MONGODB_URI, DB_NAM
 # Create Flask application
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ailoancalculator2024secretkey'
-app.config['MONGODB_URI'] = MONGODB_URI
+app.config['MONGODB_URI'] = 'mongodb+srv://admin:hyperX@loancalculator.mnccqo8.mongodb.net/?retryWrites=true&w=majority&appName=LoanCalculator'
 app.config['DB_NAME'] = DB_NAME
 
 # Initialize Flask extensions
@@ -55,7 +55,7 @@ try:
     
     if mongo_setup_success:
         client = MongoClient('mongodb+srv://admin:hyperX@loancalculator.mnccqo8.mongodb.net/?retryWrites=true&w=majority&appName=LoanCalculator')
-        db = client['loancalculator']
+        db = client['LoanCalculator']
         print("Connected to MongoDB successfully!")
         
         # Check if we need to import sample data (can be controlled with environment variable)
