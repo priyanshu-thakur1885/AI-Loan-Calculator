@@ -54,7 +54,7 @@ try:
     mongo_setup_success = setup_mongodb()
     
     if mongo_setup_success:
-        client = MongoClient(app.config['MONGODB_URI'], serverSelectionTimeoutMS=5000)
+        client = MongoClient('mongodb+srv://admin:hyperX@loancalculator.mnccqo8.mongodb.net/?retryWrites=true&w=majority&appName=LoanCalculator')
         db = client['loancalculator']
         print("Connected to MongoDB successfully!")
         
