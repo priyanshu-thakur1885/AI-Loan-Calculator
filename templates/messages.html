@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - AI Loan Calculator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+    <style>
+        .contacts-list {
+            height: 450px;
+            overflow-y: auto;
+            border-right: 1px solid #e1e8ed;
+        }
+        
+        .contact-item {
+            padding: 15px;
+            border-bottom: 1px solid #f0f2f5;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .contact-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .contact-item.active {
+            background-color: rgba(74, 144, 226, 0.1);
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .contact-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--secondary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+        
+        .unread-badge {
+            min-width: 20px;
+            height: 20px;
+            border-radius: 10px;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 6px;
+        }
+        
+        .messages-container {
+            height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: var(--radius-md);
+        }
+        
+        .message-bubble {
+            max-width: 75%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            margin-bottom: 10px;
+            position: relative;
+            word-break: break-word;
+        }
+        
+        .message-outgoing {
+            background-color: var(--primary-color);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message-incoming {
+            background-color: white;
+            color: var(--dark-color);
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .message-time {
+            font-size: 0.7rem;
+            color: #95a5a6;
+            margin-top: 5px;
+            text-align: right;
+        }
+        
+        .message-sender {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 3px;
+            color: #7f8c8d;
+        }
+        
+        .no-conversations {
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #95a5a6;
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #cfd9de;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-calculator me-2"></i>
+                AI Loan Calculator
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">
+                            <i class="fas fa-home me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('messages_page') }}">
+                            <i class="fas fa-envelope me-1"></i> Messages
+                            <span class="unread-badge" id="navUnreadBadge" style="display: none;"></span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#historyModal">
+                            <i class="fas fa-history me-1"></i> History
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#profileModal">
+                            <i class="fas fa-user me-1"></i> Profile
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt me-1"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container dashboard-container">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Messages</h1>
+            <p class="dashboard-subtitle">Chat with other users and loan officers</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <!-- User Controls -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Conversations</h5>
+                    <button class="btn btn-sm btn-primary" id="newMessageBtn" data-bs-toggle="modal" data-bs-target="#newMessageModal">
+                        <i class="fas fa-plus me-1"></i> New Message
+                    </button>
+                </div>
+                
+                <!-- Contacts List -->
+                <div class="contacts-list" id="contactsList">
+                    <!-- Will be populated with conversations -->
+                    <div class="text-center p-4 text-muted">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 mb-0">Loading conversations...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <!-- Message Area -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="contact-avatar me-2" id="currentChatAvatar" style="display: none;">
+                                <span id="currentChatInitial"></span>
+                            </div>
+                            <div>
+                                <h5 class="mb-0" id="currentChatName">Select a conversation</h5>
+                                <small class="text-muted" id="currentChatEmail"></small>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary d-none" id="refreshButton">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body p-0">
+                        <!-- Empty State -->
+                        <div class="no-conversations" id="emptyConversation">
+                            <div class="empty-state-icon">
+                                <i class="fas fa-comments"></i>
+                            </div>
+                            <h5>No conversation selected</h5>
+                            <p class="text-center">Select a conversation from the list<br>or start a new message</p>
+                        </div>
+                        
+                        <!-- Message Container -->
+                        <div class="messages-container" id="messagesContainer" style="display: none;">
+                            <!-- Will be populated with messages -->
+                        </div>
+                        
+                        <!-- Message Input -->
+                        <div class="p-3 border-top" id="messageInputArea" style="display: none;">
+                            <div class="d-flex mb-2">
+                                <button class="btn btn-sm btn-outline-primary me-2" id="requestLoanBtn" data-bs-toggle="modal" data-bs-target="#loanRequestModal">
+                                    <i class="fas fa-money-bill-wave me-1"></i> Request Loan
+                                </button>
+                                <button class="btn btn-sm btn-outline-success" id="viewLoansBtn">
+                                    <i class="fas fa-file-invoice-dollar me-1"></i> View Loans
+                                </button>
+                            </div>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="messageInput" placeholder="Type a message...">
+                                <button class="btn btn-primary" id="sendMessageBtn">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- New Message Modal -->
+    <div class="modal fade" id="newMessageModal" tabindex="-1" aria-labelledby="newMessageModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newMessageModalLabel">
+                        <i class="fas fa-edit me-2"></i>New Message
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="recipientEmail" class="form-label">Recipient Email</label>
+                        <input type="email" class="form-control" id="recipientEmail" placeholder="Enter recipient's email address">
+                        <div id="emailFeedback" class="invalid-feedback">
+                            No user found with this email address.
+                        </div>
+                        <div class="form-text text-muted">
+                            Enter the email address of another registered user.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newMessageContent" class="form-label">Message</label>
+                        <textarea class="form-control" id="newMessageContent" rows="4" placeholder="Type your message here..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="sendNewMessageBtn">Send Message</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="profileModalLabel">
+                        <i class="fas fa-user-circle me-2"></i>Profile Settings
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ url_for('update_profile') }}" method="post">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ current_user.name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" value="{{ current_user.email }}" disabled>
+                        </div>
+                        <div class="mb-3">
+                            <label for="current_password" class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="current_password" name="current_password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label">New Password (leave blank to keep current)</label>
+                            <input type="password" class="form-control" id="new_password" name="new_password">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loan Request Modal -->
+    <div class="modal fade" id="loanRequestModal" tabindex="-1" aria-labelledby="loanRequestModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="loanRequestModalLabel">
+                        <i class="fas fa-money-bill-wave me-2"></i>Request Loan
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="loanAmount" class="form-label">Loan Amount ($)</label>
+                        <input type="number" class="form-control" id="loanAmount" min="1" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="loanTerm" class="form-label">Loan Term (months)</label>
+                        <input type="number" class="form-control" id="loanTerm" min="1" max="120" value="12" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="interestRate" class="form-label">Interest Rate (%)</label>
+                        <input type="number" class="form-control" id="interestRate" min="0" max="100" step="0.01" value="5.0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="loanReason" class="form-label">Reason for Loan</label>
+                        <textarea class="form-control" id="loanReason" rows="3" placeholder="Please explain why you need this loan..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="alert alert-info">
+                            <div class="fw-bold mb-2">Loan Summary</div>
+                            <div>Loan Amount: $<span id="summaryAmount">0</span></div>
+                            <div>Monthly Payment: $<span id="summaryPayment">0</span></div>
+                            <div>Total Repayment: $<span id="summaryTotal">0</span></div>
+                            <div>Interest: $<span id="summaryInterest">0</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="sendLoanRequestBtn">Send Loan Request</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loans Management Modal -->
+    <div class="modal fade" id="loansModal" tabindex="-1" aria-labelledby="loansModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="loansModalLabel">
+                        <i class="fas fa-file-invoice-dollar me-2"></i>Loans
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs" id="loansTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="borrowed-tab" data-bs-toggle="tab" data-bs-target="#borrowed" type="button" role="tab">Money Borrowed</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="lent-tab" data-bs-toggle="tab" data-bs-target="#lent" type="button" role="tab">Money Lent</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content p-3" id="loansTabContent">
+                        <div class="tab-pane fade show active" id="borrowed" role="tabpanel">
+                            <div id="borrowedLoans" class="loans-list">
+                                <div class="text-center p-3">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Loading your borrowed loans...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="lent" role="tabpanel">
+                            <div id="lentLoans" class="loans-list">
+                                <div class="text-center p-3">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Loading your lent loans...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loan Details Modal -->
+    <div class="modal fade" id="loanDetailsModal" tabindex="-1" aria-labelledby="loanDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="loanDetailsModalLabel">
+                        <i class="fas fa-file-invoice-dollar me-2"></i>Loan Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="loanDetailsContent">
+                        <div class="text-center p-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading loan details...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success d-none" id="approveLoanBtn">Approve Loan</button>
+                    <button type="button" class="btn btn-danger d-none" id="rejectLoanBtn">Reject</button>
+                    <button type="button" class="btn btn-primary d-none" id="makePaymentBtn" data-bs-toggle="modal" data-bs-target="#makePaymentModal">Make Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Make Payment Modal -->
+    <div class="modal fade" id="makePaymentModal" tabindex="-1" aria-labelledby="makePaymentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="makePaymentModalLabel">
+                        <i class="fas fa-money-bill-wave me-2"></i>Make a Payment
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="paymentAmount" class="form-label">Payment Amount ($)</label>
+                        <input type="number" class="form-control" id="paymentAmount" min="1" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <div class="alert alert-info">
+                            <div>Remaining Balance: $<span id="remainingBalance">0</span></div>
+                            <div>Suggested Payment: $<span id="suggestedPayment">0</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmPaymentBtn">Make Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dark Mode Toggle -->
+    <div class="position-fixed bottom-0 end-0 p-3">
+        <button class="btn btn-sm btn-dark rounded-circle" id="darkModeToggle" style="width: 40px; height: 40px;">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            let currentChatUserId = null;
+            let currentChatUserName = '';
+            let checkMessagesInterval = null;
+            
+            // Load conversations initially
+            loadConversations();
+            
+            // Start periodic checking for new messages
+            checkMessagesInterval = setInterval(checkForNewMessages, 30000); // Check every 30 seconds
+            
+            // Initialize Dark Mode toggle
+            $('#darkModeToggle').click(function() {
+                $('body').toggleClass('dark-mode');
+                const icon = $(this).find('i');
+                if(icon.hasClass('fa-moon')) {
+                    icon.removeClass('fa-moon').addClass('fa-sun');
+                } else {
+                    icon.removeClass('fa-sun').addClass('fa-moon');
+                }
+            });
+            
+            // Refresh button
+            $('#refreshButton').click(function() {
+                if (currentChatUserId) {
+                    loadMessages(currentChatUserId, currentChatUserName);
+                }
+            });
+            
+            // Send message button
+            $('#sendMessageBtn').click(sendMessage);
+            
+            // Enter key in message input
+            $('#messageInput').keypress(function(e) {
+                if (e.which === 13) { // Enter key
+                    sendMessage();
+                }
+            });
+            
+            // Load users for new message modal
+            $('#newMessageModal').on('show.bs.modal', function() {
+                // Clear previous values
+                $('#recipientEmail').val('');
+                $('#emailFeedback').hide();
+                $('#newMessageContent').val('');
+                $('#recipientEmail').removeClass('is-invalid');
+            });
+            
+            // Send new message
+            $('#sendNewMessageBtn').click(function() {
+                const recipientEmail = $('#recipientEmail').val().trim();
+                const content = $('#newMessageContent').val().trim();
+                
+                if (!recipientEmail) {
+                    alert('Please enter recipient email');
+                    return;
+                }
+                
+                if (!content) {
+                    alert('Please enter a message');
+                    return;
+                }
+                
+                // First verify the email exists
+                $.ajax({
+                    url: '/check_email',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        email: recipientEmail
+                    }),
+                    success: function(response) {
+                        if (response.exists) {
+                            // Email exists, send the message
+                            sendNewMessage(recipientEmail, response.user_id, response.name, content);
+                        } else {
+                            // Show error feedback
+                            $('#recipientEmail').addClass('is-invalid');
+                            $('#emailFeedback').text('No user found with this email address.');
+                            $('#emailFeedback').show();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error checking email:", error);
+                        console.error("Status:", status);
+                        console.error("Response:", xhr.responseText);
+                        
+                        let errorMessage = 'Error checking email. Please try again.';
+                        
+                        // Try to get more specific error from response if possible
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response && response.error) {
+                                errorMessage = response.error;
+                            }
+                        } catch (e) {
+                            // Use default error message
+                        }
+                        
+                        // Show error message
+                        $('#recipientEmail').addClass('is-invalid');
+                        $('#emailFeedback').text(errorMessage);
+                        $('#emailFeedback').show();
+                    }
+                });
+            });
+            
+            function sendNewMessage(recipientEmail, recipientId, recipientName, content) {
+                $.ajax({
+                    url: '/send_message',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        recipient_id: recipientId,
+                        content: content
+                    }),
+                    success: function(response) {
+                        // Close modal
+                        $('#newMessageModal').modal('hide');
+                        
+                        // Reload conversations to show new message
+                        loadConversations();
+                        
+                        // If conversation with this user is already open, reload messages
+                        if (currentChatUserId === recipientId) {
+                            loadMessages(currentChatUserId, currentChatUserName);
+                        } else {
+                            // Switch to this conversation
+                            showChat(recipientId, recipientName, recipientEmail);
+                        }
+                    },
+                    error: function() {
+                        alert('Error sending message. Please try again.');
+                    }
+                });
+            }
+            
+            function loadConversations() {
+                $('#contactsList').html(`
+                    <div class="text-center p-4 text-muted">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 mb-0">Loading conversations...</p>
+                    </div>
+                `);
+                
+                $.ajax({
+                    url: '/conversations',
+                    method: 'GET',
+                    success: function(conversations) {
+                        if (conversations.length === 0) {
+                            $('#contactsList').html(`
+                                <div class="text-center p-4 text-muted">
+                                    <div class="empty-state-icon">
+                                        <i class="fas fa-comments"></i>
+                                    </div>
+                                    <p>No conversations yet</p>
+                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#newMessageModal">
+                                        Start a new conversation
+                                    </button>
+                                </div>
+                            `);
+                        } else {
+                            $('#contactsList').empty();
+                            
+                            conversations.forEach(convo => {
+                                const unreadBadge = convo.unread_count > 0 
+                                    ? `<span class="unread-badge">${convo.unread_count}</span>` 
+                                    : '';
+                                    
+                                const lastMessage = convo.is_sender 
+                                    ? `<span class="text-muted"><i class="fas fa-reply me-1"></i>${truncateText(convo.last_message, 30)}</span>`
+                                    : truncateText(convo.last_message, 30);
+                                
+                                $('#contactsList').append(`
+                                    <div class="contact-item ${currentChatUserId === convo.user_id ? 'active' : ''}" 
+                                         data-user-id="${convo.user_id}" 
+                                         data-user-name="${convo.name}"
+                                         data-user-email="${convo.email}">
+                                        <div class="d-flex align-items-center">
+                                            <div class="contact-avatar me-3">
+                                                ${convo.name.charAt(0)}
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">${convo.name}</h6>
+                                                    ${unreadBadge}
+                                                </div>
+                                                <div class="small">
+                                                    ${lastMessage}
+                                                </div>
+                                                <div class="smaller text-muted">
+                                                    ${formatTimestamp(convo.timestamp)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `);
+                            });
+                            
+                            // Attach click event to conversation items
+                            $('.contact-item').click(function() {
+                                const userId = $(this).data('user-id');
+                                const userName = $(this).data('user-name');
+                                const userEmail = $(this).data('user-email');
+                                
+                                // Set active class
+                                $('.contact-item').removeClass('active');
+                                $(this).addClass('active');
+                                
+                                // Remove unread badge from this conversation
+                                $(this).find('.unread-badge').remove();
+                                
+                                // Load messages for this conversation
+                                showChat(userId, userName, userEmail);
+                            });
+                        }
+                    },
+                    error: function() {
+                        $('#contactsList').html(`
+                            <div class="text-center p-4 text-danger">
+                                <i class="fas fa-exclamation-circle mb-2" style="font-size: 1.5rem;"></i>
+                                <p>Error loading conversations</p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="loadConversations()">
+                                    Try Again
+                                </button>
+                            </div>
+                        `);
+                    }
+                });
+            }
+            
+            function showChat(recipientId, recipientName, recipientEmail) {
+                currentChatUserId = recipientId;
+                currentChatUserName = recipientName;
+                
+                // Update chat header
+                $('#currentChatName').text(recipientName);
+                $('#currentChatEmail').text(recipientEmail || '');
+                $('#currentChatAvatar').show().find('#currentChatInitial').text(recipientName.charAt(0));
+                
+                // Show message input area and hide empty state
+                $('#messageInputArea').show();
+                $('#emptyConversation').hide();
+                $('#messagesContainer').show();
+                $('#refreshButton').removeClass('d-none');
+                
+                // Load messages
+                loadMessages(currentChatUserId, currentChatUserName);
+            }
+            
+            function loadMessages(userId, userName) {
+                $('#messagesContainer').html(`
+                    <div class="text-center p-4">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 mb-0">Loading messages...</p>
+                    </div>
+                `);
+                
+                $.ajax({
+                    url: '/messages/' + userId,
+                    method: 'GET',
+                    success: function(messages) {
+                        if (messages.length === 0) {
+                            $('#messagesContainer').html(`
+                                <div class="text-center p-4 text-muted">
+                                    <p>No messages yet</p>
+                                    <p>Start the conversation with ${userName}</p>
+                                </div>
+                            `);
+                        } else {
+                            $('#messagesContainer').empty();
+                            
+                            let currentDate = '';
+                            
+                            messages.forEach(msg => {
+                                const timestamp = new Date(msg.timestamp);
+                                const formattedDate = timestamp.toLocaleDateString(undefined, { 
+                                    year: 'numeric', month: 'short', day: 'numeric' 
+                                });
+                                
+                                // Add date separator if date changes
+                                if (formattedDate !== currentDate) {
+                                    currentDate = formattedDate;
+                                    $('#messagesContainer').append(`
+                                        <div class="text-center my-3">
+                                            <small class="text-muted px-3 py-1 bg-light rounded">${formattedDate}</small>
+                                        </div>
+                                    `);
+                                }
+                                
+                                const formattedTime = timestamp.toLocaleTimeString(undefined, { 
+                                    hour: '2-digit', minute: '2-digit' 
+                                });
+                                
+                                if (msg.is_self) {
+                                    // Outgoing message (from current user)
+                                    $('#messagesContainer').append(`
+                                        <div class="message-bubble message-outgoing">
+                                            ${msg.content}
+                                            <div class="message-time">${formattedTime}</div>
+                                        </div>
+                                    `);
+                                } else {
+                                    // Incoming message (from other user)
+                                    $('#messagesContainer').append(`
+                                        <div class="message-bubble message-incoming">
+                                            <div class="message-sender">${userName}</div>
+                                            ${msg.content}
+                                            <div class="message-time">${formattedTime}</div>
+                                        </div>
+                                    `);
+                                }
+                            });
+                            
+                            // Scroll to bottom
+                            scrollToBottom();
+                            
+                            // Reload conversations to update unread counts
+                            loadConversations();
+                        }
+                    },
+                    error: function() {
+                        $('#messagesContainer').html(`
+                            <div class="text-center p-4 text-danger">
+                                <i class="fas fa-exclamation-circle mb-2" style="font-size: 1.5rem;"></i>
+                                <p>Error loading messages</p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="loadMessages('${userId}', '${userName}')">
+                                    Try Again
+                                </button>
+                            </div>
+                        `);
+                    }
+                });
+            }
+            
+            function sendMessage() {
+                const content = $('#messageInput').val().trim();
+                
+                if (!content) {
+                    return;
+                }
+                
+                if (!currentChatUserId) {
+                    alert('Please select a recipient');
+                    return;
+                }
+                
+                // Clear input
+                $('#messageInput').val('');
+                
+                // Add message to UI immediately (optimistic UI)
+                const now = new Date();
+                const formattedTime = now.toLocaleTimeString(undefined, { 
+                    hour: '2-digit', minute: '2-digit' 
+                });
+                
+                $('#messagesContainer').append(`
+                    <div class="message-bubble message-outgoing">
+                        ${content}
+                        <div class="message-time">${formattedTime} <i class="fas fa-clock ms-1" id="pendingIcon"></i></div>
+                    </div>
+                `);
+                
+                // Scroll to bottom
+                scrollToBottom();
+                
+                // Send message to server
+                $.ajax({
+                    url: '/send_message',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        recipient_id: currentChatUserId,
+                        content: content
+                    }),
+                    success: function(response) {
+                        // Replace pending icon with checkmark
+                        $('#pendingIcon').removeClass('fa-clock').addClass('fa-check');
+                        
+                        // Reload conversations to update last message
+                        loadConversations();
+                    },
+                    error: function() {
+                        // Replace pending icon with error icon
+                        $('#pendingIcon').removeClass('fa-clock').addClass('fa-exclamation-circle text-danger');
+                        
+                        // Show error message
+                        alert('Error sending message. Please try again.');
+                    }
+                });
+            }
+            
+            function checkForNewMessages() {
+                $.ajax({
+                    url: '/check_messages',
+                    method: 'GET',
+                    success: function(response) {
+                        // Update unread count badge in navbar
+                        if (response.unread_count > 0) {
+                            $('#navUnreadBadge').text(response.unread_count).show();
+                            
+                            // Reload conversations if we're on the messages page
+                            if (window.location.pathname.includes('/messages_page')) {
+                                loadConversations();
+                                
+                                // Reload current chat if active
+                                if (currentChatUserId) {
+                                    loadMessages(currentChatUserId, currentChatUserName);
+                                }
+                            }
+                        } else {
+                            $('#navUnreadBadge').hide();
+                        }
+                    }
+                });
+            }
+            
+            // Check for initial unread messages
+            checkForNewMessages();
+            
+            // Helper function to truncate text
+            function truncateText(text, maxLength) {
+                if (!text) return '';
+                return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+            }
+            
+            // Helper function to format timestamp
+            function formatTimestamp(timestamp) {
+                const date = new Date(timestamp);
+                const now = new Date();
+                
+                const isToday = 
+                    date.getDate() === now.getDate() && 
+                    date.getMonth() === now.getMonth() &&
+                    date.getFullYear() === now.getFullYear();
+                
+                if (isToday) {
+                    return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                } else {
+                    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                }
+            }
+            
+            // Helper function to scroll chat to bottom
+            function scrollToBottom() {
+                const container = document.getElementById('messagesContainer');
+                container.scrollTop = container.scrollHeight;
+            }
+            
+            // ------------- Loan Management Functions -------------
+            
+            // Calculate loan summary when inputs change
+            $('#loanAmount, #loanTerm, #interestRate').on('input', calculateLoanSummary);
+            
+            function calculateLoanSummary() {
+                const amount = parseFloat($('#loanAmount').val()) || 0;
+                const term = parseInt($('#loanTerm').val()) || 12;
+                const rate = parseFloat($('#interestRate').val()) || 0;
+                
+                // Calculate monthly payment: P * (r(1+r)^n) / ((1+r)^n - 1)
+                // Where P = principal, r = monthly interest rate, n = number of payments
+                const monthlyRate = rate / 100 / 12;
+                let monthlyPayment = 0;
+                
+                if (rate > 0) {
+                    const numerator = monthlyRate * Math.pow(1 + monthlyRate, term);
+                    const denominator = Math.pow(1 + monthlyRate, term) - 1;
+                    monthlyPayment = amount * (numerator / denominator);
+                } else {
+                    // Simple division if no interest
+                    monthlyPayment = amount / term;
+                }
+                
+                const totalPayment = monthlyPayment * term;
+                const totalInterest = totalPayment - amount;
+                
+                // Update the summary
+                $('#summaryAmount').text(amount.toFixed(2));
+                $('#summaryPayment').text(monthlyPayment.toFixed(2));
+                $('#summaryTotal').text(totalPayment.toFixed(2));
+                $('#summaryInterest').text(totalInterest.toFixed(2));
+            }
+            
+            // Send loan request
+            $('#sendLoanRequestBtn').click(function() {
+                const amount = parseFloat($('#loanAmount').val());
+                const term = parseInt($('#loanTerm').val());
+                const rate = parseFloat($('#interestRate').val());
+                const reason = $('#loanReason').val().trim();
+                
+                if (!amount || amount <= 0) {
+                    alert('Please enter a valid loan amount');
+                    return;
+                }
+                
+                if (!term || term <= 0) {
+                    alert('Please enter a valid loan term');
+                    return;
+                }
+                
+                if (!currentChatUserId) {
+                    alert('Please select a recipient for the loan request');
+                    return;
+                }
+                
+                // Send loan request
+                $.ajax({
+                    url: '/request_loan',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        lender_id: currentChatUserId,
+                        amount: amount,
+                        term_months: term,
+                        interest_rate: rate,
+                        reason: reason
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            // Close modal
+                            $('#loanRequestModal').modal('hide');
+                            
+                            // Send a message to notify about the loan request
+                            const message = `I've sent you a loan request for $${amount.toFixed(2)}. Please check your loans section to approve or reject it.`;
+                            $('#messageInput').val(message);
+                            sendMessage();
+                            
+                            // Reset form
+                            $('#loanAmount').val('');
+                            $('#loanReason').val('');
+                            calculateLoanSummary();
+                            
+                            // Notify user
+                            alert('Loan request sent successfully!');
+                        } else {
+                            alert('Error sending loan request: ' + (response.error || 'Unknown error'));
+                        }
+                    },
+                    error: function() {
+                        alert('Error sending loan request. Please try again.');
+                    }
+                });
+            });
+            
+            // Open loans modal
+            $('#viewLoansBtn').click(function() {
+                loadLoans();
+                $('#loansModal').modal('show');
+            });
+            
+            // Load user's loans
+            function loadLoans() {
+                $.ajax({
+                    url: '/user_loans',
+                    method: 'GET',
+                    success: function(loans) {
+                        // Separate loans into borrowed and lent
+                        const borrowed = loans.filter(loan => loan.is_borrower);
+                        const lent = loans.filter(loan => !loan.is_borrower);
+                        
+                        // Render borrowed loans
+                        if (borrowed.length === 0) {
+                            $('#borrowedLoans').html('<div class="alert alert-info">You have no borrowed loans.</div>');
+                        } else {
+                            renderLoans(borrowed, $('#borrowedLoans'));
+                        }
+                        
+                        // Render lent loans
+                        if (lent.length === 0) {
+                            $('#lentLoans').html('<div class="alert alert-info">You have no loans that you\'ve lent to others.</div>');
+                        } else {
+                            renderLoans(lent, $('#lentLoans'));
+                        }
+                    },
+                    error: function() {
+                        $('#borrowedLoans, #lentLoans').html(
+                            '<div class="alert alert-danger">' +
+                            '<i class="fas fa-exclamation-circle me-2"></i>' +
+                            'Error loading loans. Please try again.' +
+                            '</div>'
+                        );
+                    }
+                });
+            }
+            
+            // Render loans in container
+            function renderLoans(loans, container) {
+                container.empty();
+                
+                loans.forEach(loan => {
+                    // Determine status badge color
+                    let statusBadgeClass = '';
+                    switch(loan.status) {
+                        case 'pending': statusBadgeClass = 'bg-warning'; break;
+                        case 'approved': statusBadgeClass = 'bg-success'; break;
+                        case 'rejected': statusBadgeClass = 'bg-danger'; break;
+                        case 'paid': statusBadgeClass = 'bg-info'; break;
+                        default: statusBadgeClass = 'bg-secondary';
+                    }
+                    
+                    // Format remaining amount or payment complete message
+                    let remainingText = '';
+                    if (loan.status === 'paid') {
+                        remainingText = '<span class="text-success">Paid in full</span>';
+                    } else if (loan.status === 'approved') {
+                        remainingText = `Remaining: $${loan.remaining_amount.toFixed(2)}`;
+                    }
+                    
+                    container.append(`
+                        <div class="card mb-3 loan-card" data-loan-id="${loan.id}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h5 class="card-title mb-0">
+                                        $${loan.amount.toFixed(2)} Loan
+                                    </h5>
+                                    <span class="badge ${statusBadgeClass}">${loan.status.toUpperCase()}</span>
+                                </div>
+                                <div class="card-text">
+                                    <div><strong>${loan.is_borrower ? 'Lender' : 'Borrower'}:</strong> ${loan.counterparty_name}</div>
+                                    <div><strong>Date Requested:</strong> ${new Date(loan.date_requested).toLocaleString()}</div>
+                                    <div><strong>Term:</strong> ${loan.term_months} months</div>
+                                    <div><strong>Interest Rate:</strong> ${loan.interest_rate}%</div>
+                                    <div><strong>Monthly Payment:</strong> $${loan.monthly_payment.toFixed(2)}</div>
+                                    <div>${remainingText}</div>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary mt-2 view-loan-btn">
+                                    View Details
+                                </button>
+                            </div>
+                        </div>
+                    `);
+                });
+                
+                // Attach click event to view loan details
+                container.find('.view-loan-btn').click(function() {
+                    const loanId = $(this).closest('.loan-card').data('loan-id');
+                    viewLoanDetails(loanId);
+                });
+            }
+            
+            // View loan details
+            function viewLoanDetails(loanId) {
+                // Show loan details modal
+                $('#loanDetailsModal').modal('show');
+                
+                // Reset buttons
+                $('#approveLoanBtn, #rejectLoanBtn, #makePaymentBtn').addClass('d-none');
+                
+                // Load loan details
+                $.ajax({
+                    url: `/loans/${loanId}`,
+                    method: 'GET',
+                    success: function(loan) {
+                        // Store current loan ID for approve/reject/payment actions
+                        $('#loanDetailsModal').data('loan-id', loanId);
+                        
+                        // Format status
+                        let statusClass = '';
+                        switch(loan.status) {
+                            case 'pending': statusClass = 'text-warning'; break;
+                            case 'approved': statusClass = 'text-success'; break;
+                            case 'rejected': statusClass = 'text-danger'; break;
+                            case 'paid': statusClass = 'text-info'; break;
+                            default: statusClass = 'text-secondary';
+                        }
+                        
+                        // Format dates
+                        let approvalDate = loan.date_approved ? new Date(loan.date_approved).toLocaleString() : 'N/A';
+                        let completionDate = loan.date_completed ? new Date(loan.date_completed).toLocaleString() : 'N/A';
+                        
+                        // Prepare payments section
+                        let paymentsHtml = '<div class="mt-3 mb-2"><strong>Payment History:</strong></div>';
+                        
+                        if (!loan.payments || loan.payments.length === 0) {
+                            paymentsHtml += '<div class="alert alert-info py-2">No payments have been made yet.</div>';
+                        } else {
+                            paymentsHtml += '<div class="table-responsive"><table class="table table-sm"><thead>' +
+                                '<tr><th>Date</th><th>Amount</th></tr></thead><tbody>';
+                            
+                            loan.payments.forEach(payment => {
+                                const paymentDate = new Date(payment.date).toLocaleString();
+                                paymentsHtml += `<tr><td>${paymentDate}</td><td>$${payment.amount.toFixed(2)}</td></tr>`;
+                            });
+                            
+                            paymentsHtml += '</tbody></table></div>';
+                        }
+                        
+                        // Show loan details
+                        $('#loanDetailsContent').html(`
+                            <div class="mb-3">
+                                <h5 class="d-flex justify-content-between">
+                                    <span>$${loan.amount.toFixed(2)} Loan</span>
+                                    <span class="${statusClass}">${loan.status.toUpperCase()}</span>
+                                </h5>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div><strong>Borrower:</strong> ${loan.borrower_name}</div>
+                                    <div><strong>Lender:</strong> ${loan.lender_name}</div>
+                                    <div><strong>Date Requested:</strong> ${new Date(loan.date_requested).toLocaleString()}</div>
+                                    <div><strong>Date Approved:</strong> ${approvalDate}</div>
+                                    <div><strong>Date Completed:</strong> ${completionDate}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div><strong>Term:</strong> ${loan.term_months} months</div>
+                                    <div><strong>Interest Rate:</strong> ${loan.interest_rate}%</div>
+                                    <div><strong>Monthly Payment:</strong> $${loan.monthly_payment.toFixed(2)}</div>
+                                    <div><strong>Remaining:</strong> $${loan.remaining_amount ? loan.remaining_amount.toFixed(2) : loan.amount.toFixed(2)}</div>
+                                    <div><strong>Payments Made:</strong> ${loan.payments ? loan.payments.length : 0}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <strong>Reason:</strong>
+                                <p class="mb-0">${loan.reason || 'No reason provided'}</p>
+                            </div>
+                            
+                            ${paymentsHtml}
+                        `);
+                        
+                        // Store remaining amount for payment form
+                        $('#remainingBalance').text(loan.remaining_amount ? loan.remaining_amount.toFixed(2) : loan.amount.toFixed(2));
+                        $('#suggestedPayment').text(loan.monthly_payment ? loan.monthly_payment.toFixed(2) : '0.00');
+                        $('#paymentAmount').val(loan.monthly_payment ? loan.monthly_payment.toFixed(2) : '');
+                        
+                        // Show appropriate buttons based on loan status and user role
+                        const isBorrower = loan.borrower_id === '{{ current_user.id }}';
+                        const isLender = loan.lender_id === '{{ current_user.id }}';
+                        
+                        if (isLender && loan.status === 'pending') {
+                            // Lender can approve or reject pending loans
+                            $('#approveLoanBtn, #rejectLoanBtn').removeClass('d-none');
+                        } else if (isBorrower && loan.status === 'approved') {
+                            // Borrower can make payments on approved loans
+                            $('#makePaymentBtn').removeClass('d-none');
+                        }
+                    },
+                    error: function() {
+                        $('#loanDetailsContent').html(`
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                Error loading loan details. Please try again.
+                            </div>
+                        `);
+                    }
+                });
+            }
+            
+            // Approve loan
+            $('#approveLoanBtn').click(function() {
+                respondToLoan('approve');
+            });
+            
+            // Reject loan
+            $('#rejectLoanBtn').click(function() {
+                respondToLoan('reject');
+            });
+            
+            // Respond to loan (approve/reject)
+            function respondToLoan(action) {
+                const loanId = $('#loanDetailsModal').data('loan-id');
+                
+                if (!loanId) {
+                    alert('Error: Loan ID not found');
+                    return;
+                }
+                
+                if (!confirm(`Are you sure you want to ${action} this loan?`)) {
+                    return;
+                }
+                
+                $.ajax({
+                    url: '/respond_to_loan',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        loan_id: loanId,
+                        action: action
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            // Reload loan details
+                            viewLoanDetails(loanId);
+                            // Reload loans list
+                            loadLoans();
+                            // Notify user
+                            alert(`Loan has been ${action}d successfully!`);
+                        } else {
+                            alert('Error: ' + (response.error || 'Failed to process your request'));
+                        }
+                    },
+                    error: function() {
+                        alert('Error processing your request. Please try again.');
+                    }
+                });
+            }
+            
+            // Make a payment
+            $('#confirmPaymentBtn').click(function() {
+                const loanId = $('#loanDetailsModal').data('loan-id');
+                const amount = parseFloat($('#paymentAmount').val());
+                
+                if (!loanId) {
+                    alert('Error: Loan ID not found');
+                    return;
+                }
+                
+                if (!amount || amount <= 0) {
+                    alert('Please enter a valid payment amount');
+                    return;
+                }
+                
+                $.ajax({
+                    url: '/make_payment',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        loan_id: loanId,
+                        amount: amount
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            // Close payment modal
+                            $('#makePaymentModal').modal('hide');
+                            
+                            // Reload loan details
+                            viewLoanDetails(loanId);
+                            
+                            // Reload loans list
+                            loadLoans();
+                            
+                            // Notify user
+                            alert(response.message || 'Payment made successfully!');
+                        } else {
+                            alert('Error: ' + (response.error || 'Failed to process your payment'));
+                        }
+                    },
+                    error: function() {
+                        alert('Error processing your payment. Please try again.');
+                    }
+                });
+            });
+            
+            // Initialize loan summary calculator
+            calculateLoanSummary();
+        });
+    </script>
+</body>
+</html> 

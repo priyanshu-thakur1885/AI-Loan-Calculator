@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - AI Loan Calculator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-calculator me-2"></i>
+                AI Loan Calculator
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('dashboard') }}">
+                            <i class="fas fa-home me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('messages_page') }}">
+                            <i class="fas fa-envelope me-1"></i> Messages
+                            <span class="unread-badge" id="navUnreadBadge" style="display: none;"></span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#historyModal">
+                            <i class="fas fa-history me-1"></i> History
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#profileModal">
+                            <i class="fas fa-user me-1"></i> Profile
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt me-1"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container dashboard-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Welcome, {{ current_user.name }}</h1>
+            <p class="dashboard-subtitle">Use our AI-powered tools to calculate loans and get personalized assistance</p>
+        </div>
+
+        <!-- User Profile Card -->
+        <div class="profile-card mb-4">
+            <div class="profile-avatar">
+                {{ current_user.name[0] }}
+            </div>
+            <div class="profile-info">
+                <h3 class="profile-name">{{ current_user.name }}</h3>
+                <p class="profile-email">{{ current_user.email }}</p>
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ loan_history|length }}</div>
+                        <div class="stat-label">Calculations</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ current_user.date_registered.strftime('%d %b %Y') }}</div>
+                        <div class="stat-label">Member Since</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Calculator Section -->
+            <div class="col-lg-6">
+                <div class="calculator-container">
+                    <h4 class="calculator-title">
+                        <i class="fas fa-calculator me-2"></i>Loan Calculator
+                    </h4>
+                    <form id="loanForm">
+                        <div class="mb-3">
+                            <label for="principal" class="form-label">Loan Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="principal" placeholder="Enter loan amount" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="rate" class="form-label">Annual Interest Rate</label>
+                            <div class="input-group">
+                                <span class="input-group-text">%</span>
+                                <input type="number" class="form-control" id="rate" placeholder="Enter interest rate" step="0.1" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="years" class="form-label">Loan Term</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                <input type="number" class="form-control" id="years" placeholder="Enter term in years" required>
+                                <span class="input-group-text">Years</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-calculator me-2"></i>Calculate Loan
+                        </button>
+                    </form>
+
+                    <div class="calculation-result" id="results" style="display: none;">
+                        <div class="result-item">
+                            <div class="result-label">Monthly Payment:</div>
+                            <div class="result-value" id="monthlyPayment">$0</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">Total Payment:</div>
+                            <div class="result-value" id="totalPayment">$0</div>
+                        </div>
+                        <div class="result-item">
+                            <div class="result-label">Total Interest:</div>
+                            <div class="result-value" id="totalInterest">$0</div>
+                        </div>
+                        <div class="mt-3 text-end">
+                            <button id="saveCalculation" class="btn btn-outline-primary">
+                                <i class="fas fa-save me-1"></i> Save Calculation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Section -->
+            <div class="col-lg-6">
+                <div class="glass-card">
+                    <h4 class="feature-title">
+                        <i class="fas fa-robot me-2"></i>AI Assistant
+                    </h4>
+                    <div class="chat-mode-toggle mb-3">
+                        <div class="toggle-label me-2">Mode: <span id="chatModeLabel">Standard</span></div>
+                        <label class="toggle-switch mx-2">
+                            <input type="checkbox" id="chatModeToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <div class="toggle-label ms-2">Custom AI</div>
+                    </div>
+                    <div class="chat-container" id="chatContainer">
+                        <div class="chat-message bot-message">
+                            <div class="message-content">
+                                Hello, {{ current_user.name }}! I'm your AI loan assistant. How can I help you today?
+                            </div>
+                            <div class="message-time">Just now</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <button class="btn btn-sm btn-outline-primary" onclick="askQuestion('What types of loans do you offer?')">
+                            <i class="fas fa-question-circle me-1"></i> Loan Types
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="askQuestion('What are your interest rates?')">
+                            <i class="fas fa-percentage me-1"></i> Interest Rates
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="askQuestion('How do I qualify for a loan?')">
+                            <i class="fas fa-check-circle me-1"></i> Qualifications
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="askQuestion('How can I improve my credit score?')">
+                            <i class="fas fa-chart-line me-1"></i> Credit Score
+                        </button>
+                    </div>
+
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="userInput" placeholder="Ask me anything about loans...">
+                        <button class="btn btn-primary" id="sendMessage">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <div class="text-muted mt-2" style="font-size: 0.8em;">
+                        <p id="chatModeDescription">Standard Mode: Pre-programmed responses to common loan questions.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loan Breakdown Chart -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="feature-card" id="breakdownContainer" style="display: none;">
+                    <h4 class="feature-title">
+                        <i class="fas fa-chart-pie me-2"></i>Loan Breakdown
+                    </h4>
+                    <div id="breakdownGraph"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-hand-holding-usd"></i>
+                    </div>
+                    <h5 class="feature-title">Best Rates</h5>
+                    <p class="feature-description">We offer competitive interest rates starting from 5.99% APR, tailored to your financial profile.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h5 class="feature-title">Secure Process</h5>
+                    <p class="feature-description">Your data is encrypted and protected with bank-level security measures.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h5 class="feature-title">Fast Approval</h5>
+                    <p class="feature-description">Get pre-approved within minutes and receive funds as soon as the next business day.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="historyModalLabel">
+                        <i class="fas fa-history me-2"></i>Calculation History
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {% if loan_history %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Loan Amount</th>
+                                        <th>Interest Rate</th>
+                                        <th>Term (Years)</th>
+                                        <th>Monthly Payment</th>
+                                        <th>Total Interest</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for loan in loan_history %}
+                                    <tr>
+                                        <td>{{ loan.date_created.strftime('%Y-%m-%d') }}</td>
+                                        <td>${{ loan.principal }}</td>
+                                        <td>{{ loan.interest_rate }}%</td>
+                                        <td>{{ loan.term_years }}</td>
+                                        <td>${{ loan.monthly_payment }}</td>
+                                        <td>${{ loan.total_interest }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary load-calculation" data-id="{{ loan.id }}">
+                                                <i class="fas fa-redo-alt"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger delete-calculation" data-id="{{ loan.id }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center">No calculation history yet. Save a calculation to see it here.</p>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="profileModalLabel">
+                        <i class="fas fa-user-circle me-2"></i>Profile Settings
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ url_for('update_profile') }}" method="post">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ current_user.name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" value="{{ current_user.email }}" disabled>
+                        </div>
+                        <div class="mb-3">
+                            <label for="current_password" class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="current_password" name="current_password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label">New Password (leave blank to keep current)</label>
+                            <input type="password" class="form-control" id="new_password" name="new_password">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dark Mode Toggle -->
+    <div class="position-fixed bottom-0 end-0 p-3">
+        <button class="btn btn-sm btn-dark rounded-circle" id="darkModeToggle" style="width: 40px; height: 40px;">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            let customMode = false;
+            
+            // Toggle between standard and custom AI mode
+            $('#chatModeToggle').change(function() {
+                customMode = $(this).is(':checked');
+                $('#chatModeLabel').text(customMode ? 'Custom AI' : 'Standard');
+                $('#chatModeDescription').text(customMode ? 
+                    'Custom AI Mode: Advanced AI model that can answer a wider range of questions.' : 
+                    'Standard Mode: Pre-programmed responses to common loan questions.');
+            });
+
+            // Dark mode toggle
+            $('#darkModeToggle').click(function() {
+                $('body').toggleClass('dark-mode');
+                const icon = $(this).find('i');
+                if(icon.hasClass('fa-moon')) {
+                    icon.removeClass('fa-moon').addClass('fa-sun');
+                } else {
+                    icon.removeClass('fa-sun').addClass('fa-moon');
+                }
+            });
+
+            // Handle loan calculation
+            $('#loanForm').submit(function(e) {
+                e.preventDefault();
+                
+                const data = {
+                    principal: parseFloat($('#principal').val()),
+                    rate: parseFloat($('#rate').val()),
+                    years: parseInt($('#years').val())
+                };
+
+                $.ajax({
+                    url: '/calculate',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function(response) {
+                        $('#monthlyPayment').text('$' + response.monthly_payment);
+                        $('#totalPayment').text('$' + response.total_payment);
+                        $('#totalInterest').text('$' + response.total_interest);
+                        $('#results').show();
+                        
+                        // Plot the breakdown graph
+                        const breakdownData = JSON.parse(response.breakdown_graph);
+                        Plotly.newPlot('breakdownGraph', breakdownData.data, breakdownData.layout);
+                        $('#breakdownContainer').show();
+                        
+                        // Plot the monthly payment graph
+                        const monthlyData = JSON.parse(response.monthly_graph);
+                        Plotly.newPlot('monthlyGraph', monthlyData.data, monthlyData.layout);
+                        $('#monthlyGraphContainer').show();
+                    }
+                });
+            });
+
+            // Save calculation
+            $('#saveCalculation').click(function() {
+                const data = {
+                    principal: $('#principal').val(),
+                    rate: $('#rate').val(),
+                    years: $('#years').val(),
+                    monthly_payment: $('#monthlyPayment').text().replace('$', ''),
+                    total_payment: $('#totalPayment').text().replace('$', ''),
+                    total_interest: $('#totalInterest').text().replace('$', '')
+                };
+
+                $.ajax({
+                    url: '/save_calculation',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function(response) {
+                        alert('Calculation saved successfully!');
+                    },
+                    error: function() {
+                        alert('Failed to save calculation. Please try again.');
+                    }
+                });
+            });
+
+            // Load calculation from history
+            $(document).on('click', '.load-calculation', function() {
+                const id = $(this).data('id');
+                $.ajax({
+                    url: '/load_calculation/' + id,
+                    method: 'GET',
+                    success: function(response) {
+                        $('#principal').val(response.principal);
+                        $('#rate').val(response.interest_rate);
+                        $('#years').val(response.term_years);
+                        $('#loanForm').submit();
+                        $('#historyModal').modal('hide');
+                    }
+                });
+            });
+
+            // Delete calculation from history
+            $(document).on('click', '.delete-calculation', function() {
+                if (confirm('Are you sure you want to delete this calculation?')) {
+                    const id = $(this).data('id');
+                    $.ajax({
+                        url: '/delete_calculation/' + id,
+                        method: 'DELETE',
+                        success: function() {
+                            location.reload();
+                        }
+                    });
+                }
+            });
+
+            // Handle chat messages
+            $('#sendMessage').click(sendMessage);
+            $('#userInput').keypress(function(e) {
+                if (e.which == 13) sendMessage();
+            });
+
+            function sendMessage() {
+                const message = $('#userInput').val();
+                if (!message) return;
+
+                // Get current time for message timestamp
+                const now = new Date();
+                const timeStr = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+
+                // Add user message to chat
+                $('#chatContainer').append(`
+                    <div class="chat-message user-message">
+                        <div class="message-content">${message}</div>
+                        <div class="message-time">${timeStr}</div>
+                    </div>
+                `);
+
+                // Clear input
+                $('#userInput').val('');
+                
+                // Show typing indicator
+                const typingIndicator = `
+                    <div class="chat-message bot-message" id="typingIndicator">
+                        <div class="message-content">
+                            <div class="typing-indicator">
+                                <span></span><span></span><span></span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('#chatContainer').append(typingIndicator);
+                
+                // Scroll to bottom
+                scrollToBottom();
+
+                // Send message to backend
+                $.ajax({
+                    url: '/chat',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ 
+                        message: message,
+                        custom_mode: customMode
+                    }),
+                    success: function(response) {
+                        // Remove typing indicator
+                        $('#typingIndicator').remove();
+                        
+                        // Make sure response has the expected format
+                        let botMessage = response.response || "Sorry, I couldn't process that request.";
+                        
+                        // Add bot response to chat
+                        $('#chatContainer').append(`
+                            <div class="chat-message bot-message">
+                                <div class="message-content">${botMessage}</div>
+                                <div class="message-time">${timeStr}</div>
+                            </div>
+                        `);
+                        
+                        // Scroll to bottom
+                        scrollToBottom();
+                    },
+                    error: function(xhr, status, error) {
+                        // Remove typing indicator
+                        $('#typingIndicator').remove();
+                        
+                        $('#chatContainer').append(`
+                            <div class="chat-message bot-message">
+                                <div class="message-content">Sorry, there was an error processing your request. Please try again.</div>
+                                <div class="message-time">${timeStr}</div>
+                            </div>
+                        `);
+                        scrollToBottom();
+                    },
+                    timeout: 15000
+                });
+            }
+            
+            // Function to handle suggested questions
+            window.askQuestion = function(question) {
+                $('#userInput').val(question);
+                sendMessage();
+            };
+            
+            // Function to scroll to bottom of chat
+            function scrollToBottom() {
+                $('#chatContainer').scrollTop($('#chatContainer')[0].scrollHeight);
+            }
+        });
+    </script>
+</body>
+</html> 
