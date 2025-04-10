@@ -18,7 +18,7 @@ from datetime import datetime
 from mongodb_setup import setup_mongodb, import_sample_data, MONGODB_URI, DB_NAME
 
 # Create Flask application
-app = Flask(__name__, template_folder='.')
+app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ailoancalculator2024secretkey'
 app.config['MONGODB_URI'] = MONGODB_URI
 app.config['DB_NAME'] = DB_NAME
@@ -249,11 +249,8 @@ def login():
                         next_page = request.args.get('next')
                         flash('Login successful!', 'success')
                         return redirect(next_page if next_page else url_for('dashboard'))
-                    else:
-                        flash('Login unsuccessful. Please check email and password.', 'danger')
-                    return render_template('login.html')
         
-        flash('Login unsuccessful. Please check email and password.', 'danger')
+        flash('Invalid email or password', 'danger')
     
     return render_template('login.html')
 
@@ -263,69 +260,64 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     
-    # Make db global to be sure it's accessible
-    global db
-    
     if request.method == 'POST':
         name = request.form.get('name')
         email = request.form.get('email')
         password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
         
-        if password != confirm_password:
-            flash('Passwords do not match.', 'danger')
+        if not name or not email or not password:
+            flash('Please fill in all fields', 'danger')
             return render_template('register.html')
         
-        user_exists = False
+        global db
         
-        # Check if db is defined before trying to use it
         if db is not None:
             try:
-                existing_user = db.users.find_one({'email': email})
-                if existing_user:
-                    user_exists = True
+                if db.users.find_one({'email': email}):
+                    flash('Email already registered', 'danger')
+                    return render_template('register.html')
+                
+                hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+                user_data = {
+                    'name': name,
+                    'email': email,
+                    'password': hashed_password,
+                    'date_registered': datetime.now()
+                }
+                
+                result = db.users.insert_one(user_data)
+                user_data['_id'] = result.inserted_id
+                user = User(user_data)
+                login_user(user)
+                flash('Registration successful!', 'success')
+                return redirect(url_for('dashboard'))
             except Exception as e:
-                print(f"Error checking for existing user in MongoDB: {e}")
-                db = None  # Reset db as it's not working
+                print(f"Error during MongoDB registration: {e}")
+                db = None  # Reset db since it's not working
         
-        # Also check in-memory storage
-        if not user_exists:
-            for user_id, user_data in memory_db['users'].items():
-                if user_data.get('email') == email:
-                    user_exists = True
-                    break
+        # Fallback to memory storage if MongoDB is not available
+        for user_data in memory_db['users'].values():
+            if user_data.get('email') == email:
+                flash('Email already registered', 'danger')
+                return render_template('register.html')
         
-        if user_exists:
-            flash('Email already exists. Please choose a different one.', 'danger')
-            return render_template('register.html')
-        
-        # Proceed with registration
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-        new_user = {
+        user_id = str(memory_db['next_id'])
+        user_data = {
+            '_id': user_id,
             'name': name,
             'email': email,
             'password': hashed_password,
             'date_registered': datetime.now()
         }
         
-        # Check if db is defined before trying to use it
-        if db is not None:
-            try:
-                result = db.users.insert_one(new_user)
-                new_user['_id'] = result.inserted_id
-            except Exception as e:
-                print(f"Error inserting new user into MongoDB: {e}")
-                db = None  # Reset db connection since it failed
+        memory_db['users'][user_id] = user_data
+        memory_db['next_id'] += 1
         
-        # If MongoDB failed or is not available, use memory storage
-        if db is None:
-            user_id = str(memory_db['next_id'])
-            memory_db['next_id'] += 1
-            new_user['_id'] = user_id
-            memory_db['users'][user_id] = new_user
-        
-        flash('Account created successfully! You can now login.', 'success')
-        return redirect(url_for('login'))
+        user = User(user_data)
+        login_user(user)
+        flash('Registration successful!', 'success')
+        return redirect(url_for('dashboard'))
     
     return render_template('register.html')
 
@@ -343,7 +335,6 @@ def logout():
 @login_required
 def dashboard():
     global db
-    
     loan_history = []
     if db is not None:
         try:
@@ -364,18 +355,7 @@ def dashboard():
         # Sort by date (newest first)
         loan_history = sorted(loan_history, key=lambda x: x.get('date_created', datetime.now()), reverse=True)
     
-    # Get unread message count for notification badge
-    unread_count = 0
-    if db is not None:
-        try:
-            unread_count = db.messages.count_documents({
-                'recipient_id': current_user.id,
-                'read': False
-            })
-        except Exception as e:
-            print(f"Error counting unread messages: {e}")
-    
-    return render_template('index.html', loan_history=loan_history, unread_message_count=unread_count)
+    return render_template('index.html', loan_history=loan_history)
 
 # Messages page route
 @app.route('/messages_page')
