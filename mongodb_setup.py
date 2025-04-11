@@ -99,7 +99,7 @@ def import_sample_data(db=None):
             db = client[DB_NAME]
         
         # Get admin user
-        admin = db.users.find_one({'email': 'admin@example.com'})
+        admin = db.users.find_one({'email': 'adminnnnn@example.com'})
         if not admin:
             print("Admin user not found. Please run setup_mongodb() first.")
             return False
