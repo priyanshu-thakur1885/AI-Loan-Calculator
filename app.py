@@ -16,7 +16,8 @@ from nltk.corpus import stopwords
 import re
 from datetime import datetime
 from mongodb_setup import setup_mongodb, import_sample_data, MONGODB_URI, DB_NAME
-
+from dotenv import load_dotenv
+load_dotenv()
 # Create Flask application
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ailoancalculator2024secretkey'
