@@ -21,7 +21,7 @@ load_dotenv()
 # Create Flask application
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ailoancalculator2024secretkey'
-app.config['MONGODB_URI'] = 'mongodb+srv://admin:hyperX@loancalculator.mnccqo8.mongodb.net/?retryWrites=true&w=majority&appName=LoanCalculator'
+app.config['MONGODB_URI'] = 'mongodb+srv://priyanshut1885:hyperX@loancalculator.mnccqo8.mongodb.net/?retryWrites=true&w=majority&appName=LoanCalculator'
 app.config['DB_NAME'] = DB_NAME
 
 # Initialize Flask extensions
