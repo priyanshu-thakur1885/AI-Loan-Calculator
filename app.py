@@ -510,10 +510,12 @@ def save_calculation():
         'date_created': datetime.now()
     }
     
+    print(f"Attempting to save calculation: {calculation}")
     if db is not None:
         try:
             result = db.calculations.insert_one(calculation)
             calculation['id'] = str(result.inserted_id)
+            print(f"Calculation saved with ID: {calculation['id']}")
         except Exception as e:
             print(f"Error saving calculation to MongoDB: {e}")
             db = None  # Reset db since it's not working
@@ -524,6 +526,7 @@ def save_calculation():
         calculation['_id'] = memory_db['next_id']
         memory_db['next_id'] += 1
         memory_db['calculations'].append(calculation)
+        print(f"Calculation saved in memory with ID: {calculation['id']}")
     
     return jsonify({'success': True})
 
@@ -596,9 +599,9 @@ def chat():
     
     try:
         user_message = request.json['message']
+        print(f"Received message: '{user_message}'")
         # Check if custom mode is enabled (default to False if not provided)
         custom_mode = request.json.get('custom_mode', False)
-        print(f"Received message: '{user_message}' (Custom mode: {custom_mode})")
         
         # If custom mode is enabled, try the Hugging Face API first
         if custom_mode:
@@ -616,9 +619,11 @@ def chat():
                     'timestamp': datetime.now()
                 }
                 
+                print(f"Attempting to save chat log: {chat_log}")
                 if db is not None:
                     try:
                         db.chat_logs.insert_one(chat_log)
+                        print(f"Chat log saved")
                     except Exception as e:
                         print(f"Error saving chat log to MongoDB: {e}")
                         db = None  # Reset db since it's not working
@@ -628,6 +633,7 @@ def chat():
                     chat_log['id'] = str(memory_db['next_id'])
                     memory_db['next_id'] += 1
                     memory_db['chat_logs'].append(chat_log)
+                    print(f"Chat log saved in memory with ID: {chat_log['id']}")
                 
                 return jsonify({'response': hf_response})
         
@@ -695,9 +701,11 @@ def chat():
                         'timestamp': datetime.now()
                     }
                     
+                    print(f"Attempting to save chat log: {chat_log}")
                     if db is not None:
                         try:
                             db.chat_logs.insert_one(chat_log)
+                            print(f"Chat log saved")
                         except Exception as e:
                             print(f"Error saving chat log to MongoDB: {e}")
                             db = None  # Reset db since it's not working
@@ -707,6 +715,7 @@ def chat():
                         chat_log['id'] = str(memory_db['next_id'])
                         memory_db['next_id'] += 1
                         memory_db['chat_logs'].append(chat_log)
+                        print(f"Chat log saved in memory with ID: {chat_log['id']}")
                     
                     return jsonify({'response': hf_response})
             
@@ -722,9 +731,11 @@ def chat():
             'timestamp': datetime.now()
         }
         
+        print(f"Attempting to save chat log: {chat_log}")
         if db is not None:
             try:
                 db.chat_logs.insert_one(chat_log)
+                print(f"Chat log saved")
             except Exception as e:
                 print(f"Error saving chat log to MongoDB: {e}")
                 db = None  # Reset db since it's not working
@@ -734,6 +745,7 @@ def chat():
             chat_log['id'] = str(memory_db['next_id'])
             memory_db['next_id'] += 1
             memory_db['chat_logs'].append(chat_log)
+            print(f"Chat log saved in memory with ID: {chat_log['id']}")
         
         return jsonify({'response': response})
     except Exception as e:
